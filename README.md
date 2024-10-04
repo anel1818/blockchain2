@@ -27,6 +27,10 @@ Welcome to the AI Model Marketplace! This decentralized application (dApp) allow
 - **HTML/CSS**: For the front-end user interface.
 - **MetaMask**: A browser extension for managing Ethereum accounts.
 
+  ## Screenshots
+  ![Screenshot](2024-10-04_15-15-41.png)
+  
+
 ## Installation
 
 1. **Clone the Repository**:
