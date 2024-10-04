@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Marketplace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,500;1,900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.0/web3.min.js"></script>
+    <style>
+        body {
+            background-color: #f4f7fc;
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #1a1a80;
+            margin: 40px 0 20px;
+            text-align: center;
+        }
+
+        h2, h3 {
+            color: #1a1a80;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 300px;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #1a1a80;
+            border-radius: 8px;
+            background-color: #ffffff;
+            font-size: 1.1em;
+            color: #333;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: #3333aa;
+            outline: none;
+        }
+
+        button {
+            padding: 12px 25px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            background-color: #1a1a80;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #3333aa;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #modelList {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #1a1a80;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        input::placeholder {
+            color: #666;
+            font-style: italic;
+        }
+
+        h1, h2, h3, input, button {
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            input[type="text"], input[type="number"] {
+                width: 90%;
+            }
+
+            button {
+                width: 90%;
+                padding: 12px 0;
+            }
+
+            #modelList {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Model Marketplace</h1>
+    <h2 id="connectedWallet">Connected Wallet: Not connected</h2>
+
+    <h3>Add New AI Model</h3>
+    <input type="text" id="modelName" placeholder="Model Name" />
+    <input type="text" id="modelDescription" placeholder="Model Description" />
+    <input type="number" id="modelPrice" placeholder="Price in ETH" step="0.01" />
+    <button onclick="listModel()">List Model</button>
+
+    <h3>Available Models</h3>
+    <div id="modelList"></div>
+
+    
+    <div>
+        <h3>Withdraw Funds</h3>
+        <button onclick="withdrawFunds()">Withdraw Funds</button>
+        <p id="withdrawStatus"></p>
+    </div>
+
+   <script>
+
+// ABI of the smart contract
+const contractABI =[
+{
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "FundsWithdrawn",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "creator",
+          "type": "address"
+        }
+      ],
+      "name": "ModelListed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "modelId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        }
+      ],
+      "name": "ModelPurchased",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "modelId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "rating",
+          "type": "uint8"
+        }
+      ],
+      "name": "ModelRated",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "modelId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getAverageRating",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "modelId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getModelBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "modelId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getModelDetails",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getModelsCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "hasPurchased",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        }
+      ],
+      "name": "listModel",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "models",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address payable",
+          "name": "creator",
+          "type": "address"
+        },
+        {
+          "internalType": "uint8",
+          "name": "ratingCount",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalRating",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "modelId",
+          "type": "uint256"
+        }
+      ],
+      "name": "purchaseModel",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "modelId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "rating",
+          "type": "uint8"
+        }
+      ],
+      "name": "rateModel",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdrawFunds",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ];
+const contractAddress = '0xe2BC5B44AE3Ed943C0FF1CFb1edC2a7caB00b796'; // Your deployed contract address
+let web3;
+let currentAccount;
+let contract;
+
+// Connect to MetaMask
+async function connectWallet() {
+    if (window.ethereum) {
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (accounts.length > 0) {
+                currentAccount = accounts[0];
+                web3 = new Web3(window.ethereum);
+                console.log('Connected account:', currentAccount);
+
+                // Create contract instance
+                contract = new web3.eth.Contract(contractABI, contractAddress);
+
+                // Load models after connecting
+                loadModels();
+                updateConnectedWalletStatus();
+            } else {
+                console.error('No accounts found. Please ensure you have a wallet set up.');
+            }
+        } catch (error) {
+            console.error('User denied account access or other error:', error);
+        }
+    } else {
+        console.error('MetaMask is not installed. Please install it to use this dApp.');
+        alert('MetaMask is not installed. Please install it to use this dApp.');
+    }
+}
+
+// Update connected wallet status in UI
+function updateConnectedWalletStatus() {
+    const connectedWalletElement = document.getElementById('connectedWallet');
+    connectedWalletElement.textContent = `Connected Wallet: ${currentAccount}`;
+}
+
+// Load models from the contract
+async function loadModels() {
+    try {
+        const count = await contract.methods.getModelsCount().call();
+        const modelsList = document.getElementById('modelList'); // Ensure the ID is correct
+        modelsList.innerHTML = ''; // Clear previous models
+
+        for (let i = 0; i < count; i++) {
+            const modelDetails = await contract.methods.getModelDetails(i).call();
+            const averageRating = await contract.methods.getAverageRating(i).call();
+            const hasPurchased = await contract.methods.hasPurchased(i, currentAccount).call(); // Check if the user has purchased
+
+            // Create model HTML
+            const modelItem = document.createElement('div');
+            modelItem.innerHTML = `
+                <h3>${modelDetails[0]}</h3>
+                <p>${modelDetails[1]}</p>
+                <p>Price: ${web3.utils.fromWei(modelDetails[2], 'ether')} ETH</p>
+                <p>Creator: ${modelDetails[3]}</p>
+                <p>Rating Count: ${modelDetails[4]}</p>
+                <p>Total Rating: ${modelDetails[5]}</p>
+                <p>Average Rating: ${averageRating}</p>
+                ${hasPurchased ? `
+                    <input type="number" min="1" max="5" placeholder="Rate this model" id="rating_${i}" />
+                    <button onclick="rateModel(${i})">Rate</button>
+                ` : `
+                    <button onclick="purchaseModel(${i}, '${modelDetails[2]}')">Purchase</button>
+                `}
+                <hr/>
+            `;
+            modelsList.appendChild(modelItem);
+        }
+    } catch (error) {
+        console.error('Failed to load models:', error);
+    }
+}
+async function listModel() {
+    const name = document.getElementById('modelName').value;
+    const description = document.getElementById('modelDescription').value;
+    const priceInEth = document.getElementById('modelPrice').value;
+
+    if (!name || !description || !priceInEth) {
+        alert('Please fill out all fields.');
+        return;
+    }
+
+    const priceInWei = web3.utils.toWei(priceInEth, 'ether');
+
+    try {
+        await contract.methods.listModel(name, description, priceInWei).send({ from: currentAccount });
+        alert('Model successfully listed!');
+        loadModels(); 
+    } catch (error) {
+        console.error('Failed to list model:', error);
+        alert('There was an error listing the model. Please try again.');
+    }
+}
+
+// Purchase an AI model
+async function purchaseModel(modelId, priceInWei) {
+    try {
+        await contract.methods.purchaseModel(modelId).send({ from: currentAccount, value: priceInWei });
+        alert('Successfully purchased the model!');
+        loadModels(); 
+    } catch (error) {
+        console.error('Failed to purchase model:', error.message || error);
+        alert('Error: ' + (error.message || 'Unknown error occurred.'));
+    }
+}
+
+// Rate a purchased AI model
+async function rateModel(modelId) {
+    const ratingInput = document.getElementById(`rating_${modelId}`);
+    const rating = ratingInput.value;
+
+    if (rating < 1 || rating > 5) {
+        alert("Rating must be between 1 and 5.");
+        return;
+    }
+
+    try {
+        // Estimate gas and send the transaction
+        const gasEstimate = await contract.methods.rateModel(modelId, rating).estimateGas({ from: currentAccount });
+        await contract.methods.rateModel(modelId, rating).send({ from: currentAccount, gas: gasEstimate });
+        alert('Successfully rated the model!');
+        loadModels(); 
+    } catch (error) {
+        console.error('Failed to rate model:', error.message || error);
+        alert('Error: ' + (error.message || 'Unknown error occurred.'));
+    }
+}
+
+async function withdrawFunds() {
+        try {
+            await contract.methods.withdrawFunds().send({ from: currentAccount });
+            document.getElementById('withdrawStatus').textContent = 'Withdrawal successful!';
+        } catch (error) {
+            console.error('Error withdrawing funds:', error);
+            document.getElementById('withdrawStatus').textContent = 'Withdrawal failed. Please check the console for details.';
+        }
+    }
+
+// Call the connect function on page load
+window.onload = () => {
+    connectWallet();
+
+    // Add an event listener to detect account or network changes
+    window.ethereum.on('accountsChanged', (accounts) => {
+        if (accounts.length > 0) {
+            currentAccount = accounts[0];
+            updateConnectedWalletStatus();
+            loadModels();
+        } else {
+            currentAccount = null;
+            updateConnectedWalletStatus();
+        }
+    });
+
+    window.ethereum.on('chainChanged', () => {
+        // Reload the page or refresh the contract instance if the chain changes
+        window.location.reload();
+    });
+};
+   </script>
+        
+</body>
+</html>

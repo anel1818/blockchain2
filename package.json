@@ -1,0 +1,24 @@
+{
+  "name": "aimodelmarket",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "AI Model Marketplace is a decentralized application (dApp) that allows users to list, purchase, and rate AI models. Built using Solidity for smart contracts and Ethers.js for frontend interaction, this marketplace empowers creators to monetize their AI models.",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "hardhat": "^2.22.12"
+  },
+  "dependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "dotenv": "^16.4.5",
+    "ethers": "^5.7.2",
+    "http-server": "^14.1.1",
+    "web3": "^4.13.0"
+  }
+}
